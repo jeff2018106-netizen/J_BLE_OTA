@@ -1,0 +1,46 @@
+name: iOS OTA App
+project_type: ios
+language: objective-c
+
+scripts:
+  - name: Install CocoaPods dependencies
+    script: |
+      cd esp-ble-ota
+      pod install
+      
+  - name: Build iOS app (unsigned IPA for testing)
+    script: |
+      cd esp-ble-ota
+      
+      # Build the app without code signing (for development/testing)
+      xcodebuild build \
+        -workspace esp-ble-ota.xcworkspace \
+        -scheme esp-ble-ota \
+        -configuration Debug \
+        -sdk iphoneos \
+        -derivedDataPath build \
+        CODE_SIGNING_ALLOWED=NO \
+        CODE_SIGNING_REQUIRED=NO \
+        CODE_SIGN_IDENTITY="" \
+        | xcpretty
+        
+  - name: Package unsigned IPA
+    script: |
+      cd esp-ble-ota
+      
+      # Create Payload directory structure
+      mkdir -p Payload
+      cp -r build/Build/Products/Debug-iphoneos/esp-ble-ota.app Payload/
+      
+      # Create unsigned IPA
+      zip -r esp-ble-ota-unsigned.ipa Payload/
+      
+      # Move to root for easy download
+      mv esp-ble-ota-unsigned.ipa $CM_OUTPUT_DIR/
+      
+artifacts:
+  - build/*.ipa
+  - $CM_OUTPUT_DIR/*.ipa
+  
+publish_to_qa:
+  - $CM_OUTPUT_DIR/*.ipa
