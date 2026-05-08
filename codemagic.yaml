@@ -7,13 +7,10 @@ workflows:
     name: Build iOS IPA
     environment:
       xcode: latest
-      cocoapods: default
+      vars:
+        XCODE_WORKSPACE: "esp-ble-ota/esp-ble-ota.xcworkspace"
+        XCODE_SCHEME: "esp-ble-ota"
     scripts:
-      - name: Install CocoaPods dependencies
-        script: |
-          cd esp-ble-ota
-          pod install
-          
       - name: Build iOS app (unsigned)
         script: |
           cd esp-ble-ota
