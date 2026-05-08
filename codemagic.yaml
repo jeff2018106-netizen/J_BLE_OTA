@@ -7,16 +7,14 @@ workflows:
     name: Build iOS IPA
     environment:
       xcode: latest
-      vars:
-        XCODE_WORKSPACE: "esp-ble-ota/esp-ble-ota.xcworkspace"
-        XCODE_SCHEME: "esp-ble-ota"
     scripts:
       - name: Build iOS app (unsigned)
         script: |
           cd esp-ble-ota
           
+          # 使用 .xcodeproj 构建（不是 .xcworkspace）
           xcodebuild build \
-            -workspace esp-ble-ota.xcworkspace \
+            -project esp-ble-ota.xcodeproj \
             -scheme esp-ble-ota \
             -configuration Debug \
             -sdk iphoneos \
@@ -31,8 +29,19 @@ workflows:
           cd esp-ble-ota
           
           mkdir -p Payload
-          cp -r build/Build/Products/Debug-iphoneos/esp-ble-ota.app Payload/
-          zip -r $CM_BUILD_DIR/esp-ble-ota-unsigned.ipa Payload/
+          cp -r build/Build/Products/Debug-iphoneos/esp-ble-ota.app Payload/ 2>/dev/null || \
+          cp -r build/Build/Products/Release-iphoneos/esp-ble-ota.app Payload/
+          
+          if [ -d "Payload/esp-ble-ota.app" ]; then
+            zip -r $CM_BUILD_DIR/esp-ble-ota-unsigned.ipa Payload/
+            echo "✅ IPA created successfully"
+            ls -lh $CM_BUILD_DIR/esp-ble-ota-unsigned.ipa
+          else
+            echo "❌ Error: .app not found"
+            echo "Looking for .app in:"
+            find build/Build/Products -name "*.app" 2>/dev/null || echo "No .app found"
+            exit 1
+          fi
           
     artifacts:
       - $CM_BUILD_DIR/*.ipa
