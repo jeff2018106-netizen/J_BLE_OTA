@@ -13,8 +13,7 @@
 #import "BleOTAUtils.h"
 #import "EspCRC16.h"
 #import "SVProgressHUD.h"
-#import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
-    
+
 typedef enum _RemindMessageType {
     defaultType = 0,          //默认
     hiddenImage,
@@ -258,9 +257,27 @@ typedef enum _RemindMessageType {
 
 #pragma mark - 新增：选择固件文件（支持文件夹选择）
 - (void)selectFirmwareFile:(UIButton *)sender {
-    UIDocumentPickerViewController *picker = [[UIDocumentPickerViewController alloc]
-                                                  initForOpeningContentTypes:@[UTTypeData]
-                                                 mode:UIDocumentPickerModeImportMultiple];
+    UIDocumentPickerViewController *picker;
+    
+    if (@available(iOS 14.0, *)) {
+        // iOS 14+ 使用新的 UniformTypeIdentifiers API
+        Class utTypeClass = NSClassFromString(@"UTType");
+        if (utTypeClass) {
+            id dataType = [utTypeClass performSelector:@selector(data)];
+            if (dataType) {
+                picker = [[UIDocumentPickerViewController alloc]
+                              initForOpeningContentTypes:@[dataType]
+                             mode:UIDocumentPickerModeImportMultiple];
+            }
+        }
+    } 
+    
+    if (!picker) {
+        // iOS 13 及以下或 fallback
+        NSArray *types = @[@"public.data", @"com.apple.bin-archive", @"public.content"];
+        picker = [[UIDocumentPickerViewController alloc] initWithDocumentTypes:types inMode:UIDocumentPickerModeImport];
+    }
+    
     picker.delegate = self;
     picker.allowsMultipleSelection = NO;
     [self presentViewController:picker animated:YES completion:nil];
