@@ -15,16 +15,16 @@
 #import "SVProgressHUD.h"
 
 typedef enum _RemindMessageType {
-    defaultType = 0,          //默认
+    defaultType = 0,
     hiddenImage,
-    SuccessType,               //成功
-    ErrorType,                //错误
+    SuccessType,
+    ErrorType,
 }RemindMessageType;
 
 @interface ViewController ()<UITableViewDelegate, UITableViewDataSource, UITextFieldDelegate, ESPFBYBleNotifyDelegate, UIDocumentPickerDelegate>
 
 @property(strong, nonatomic)UIActivityIndicatorView *progressView;
-@property (nonatomic, strong) ESPFBYBLEHelper *espFBYBleHelper;
+@property (nonatomic, strong) ESPFBYBleHelper *espFBYBleHelper;
 @property (nonatomic, strong) NSMutableArray *dataSource;
 
 @property (nonatomic, strong) UITableView *espBleDeviceTableView;
@@ -40,19 +40,19 @@ typedef enum _RemindMessageType {
 @property(strong, nonatomic)NSMutableArray *binSectors;
 @property(nonatomic, assign)NSUInteger sectorIndex;
 
-#pragma mark - 新增：固件参数（与Android一致）
-@property(nonatomic, assign) UpgradeType upgradeType;           // 升级类型: 0=APP, 1=SPIFFS
-@property(nonatomic, assign) NSInteger partitionNumber;         // 分区号（SPIFS时有效）
-@property(nonatomic, assign) BOOL isDeltaUpgrade;               // 是否差分升级
-@property(nonatomic, assign) NSInteger partitionType;            // 分区类型
-@property(nonatomic, assign) NSInteger partitionSubtype;         // 分区子类型
-@property(nonatomic, assign) BOOL isSpecMode;                   // 是否spec模式
-@property(nonatomic, assign) NSInteger bootPartition;           // 启动分区
-@property(nonatomic, strong) NSString *selectedFileName;        // 选中的文件名
+#pragma mark - 固件参数（与Android一致）
+@property(nonatomic, assign) NSInteger upgradeType;
+@property(nonatomic, assign) NSInteger partitionNumber;
+@property(nonatomic, assign) BOOL isDeltaUpgrade;
+@property(nonatomic, assign) NSInteger partitionType;
+@property(nonatomic, assign) NSInteger partitionSubtype;
+@property(nonatomic, assign) BOOL isSpecMode;
+@property(nonatomic, assign) NSInteger bootPartition;
+@property(nonatomic, strong) NSString *selectedFileName;
 
-#pragma mark - 新增：UI组件
-@property(strong, nonatomic) UIButton *selectFileBtn;          // 选择文件按钮
-@property(strong, nonatomic) UILabel *fileInfoLabel;           // 文件信息标签
+#pragma mark - UI组件
+@property(strong, nonatomic) UIButton *selectFileBtn;
+@property(strong, nonatomic) UILabel *fileInfoLabel;
 
 @end
 
@@ -65,6 +65,15 @@ typedef enum _RemindMessageType {
     self.dataSource = [NSMutableArray arrayWithCapacity:0];
     self.binSectors = [NSMutableArray arrayWithCapacity:0];
     
+    // 初始化默认值
+    _upgradeType = 0;  // APP
+    _partitionNumber = 0;
+    _isDeltaUpgrade = NO;
+    _partitionType = 0;
+    _partitionSubtype = 0;
+    _isSpecMode = NO;
+    _bootPartition = 0;
+    
     self.nav = [[payFirstNav alloc]initWithLeftBtn:nil andWithTitleLab:@"主页" andWithRightBtn:@"扫描" andWithBgImg:nil];
     [_nav.rightBtn addTarget:self action:@selector(navRightBtn:) forControlEvents:UIControlEventTouchUpInside];
     [self.view addSubview:_nav];
@@ -75,23 +84,23 @@ typedef enum _RemindMessageType {
     versionLab.text = [NSString stringWithFormat:@"当前版本：%@", app_Version];
     [self.view addSubview:versionLab];
     
-#pragma mark - 新增：选择文件按钮
+#pragma mark - 选择文件按钮
     CGFloat btnY = statusHeight + 65;
     self.selectFileBtn = [UIButton buttonWithType:UIButtonTypeSystem];
     self.selectFileBtn.frame = CGRectMake(20, btnY, SCREEN_WIDTH - 40, 44);
-    [self.selectFileBtn setTitle:@"📁 选择固件文件 (.bin)" forState:UIControlStateNormal];
+    [self.selectFileBtn setTitle:@"Select Firmware (.bin)" forState:UIControlStateNormal];
     [self.selectFileBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
-    self.selectFileBtn.backgroundColor = [UIColor systemBlueColor];
+    self.selectFileBtn.backgroundColor = [UIColor blueColor];
     self.selectFileBtn.layer.cornerRadius = 8;
     [self.selectFileBtn addTarget:self action:@selector(selectFirmwareFile:) forControlEvents:UIControlEventTouchUpInside];
     [self.view addSubview:self.selectFileBtn];
     
-#pragma mark - 新增：文件信息显示
+#pragma mark - 文件信息显示
     self.fileInfoLabel = [[UILabel alloc] initWithFrame:CGRectMake(20, btnY + 54, SCREEN_WIDTH - 40, 60)];
     self.fileInfoLabel.numberOfLines = 3;
     self.fileInfoLabel.textColor = [UIColor grayColor];
     self.fileInfoLabel.font = [UIFont systemFontOfSize:13];
-    self.fileInfoLabel.text = @"未选择文件\n请点击上方按钮选择 .bin 固件文件";
+    self.fileInfoLabel.text = @"No file selected\nTap button above to select .bin file";
     self.fileInfoLabel.textAlignment = NSTextAlignmentCenter;
     [self.view addSubview:self.fileInfoLabel];
     
@@ -255,29 +264,13 @@ typedef enum _RemindMessageType {
     }
 }
 
-#pragma mark - 新增：选择固件文件（支持文件夹选择）
+#pragma mark - 选择固件文件
 - (void)selectFirmwareFile:(UIButton *)sender {
-    UIDocumentPickerViewController *picker;
+    NSArray *documentTypes = @[@"public.data", @"com.apple.bin-archive", @"public.item"];
     
-    if (@available(iOS 14.0, *)) {
-        // iOS 14+ 使用新的 UniformTypeIdentifiers API
-        Class utTypeClass = NSClassFromString(@"UTType");
-        if (utTypeClass) {
-            id dataType = [utTypeClass performSelector:@selector(data)];
-            if (dataType) {
-                picker = [[UIDocumentPickerViewController alloc]
-                              initForOpeningContentTypes:@[dataType]
-                             mode:UIDocumentPickerModeImportMultiple];
-            }
-        }
-    } 
-    
-    if (!picker) {
-        // iOS 13 及以下或 fallback
-        NSArray *types = @[@"public.data", @"com.apple.bin-archive", @"public.content"];
-        picker = [[UIDocumentPickerViewController alloc] initWithDocumentTypes:types inMode:UIDocumentPickerModeImport];
-    }
-    
+    UIDocumentPickerViewController *picker = [[UIDocumentPickerViewController alloc] 
+                                              initWithDocumentTypes:documentTypes 
+                                                      inMode:UIDocumentPickerModeImport];
     picker.delegate = self;
     picker.allowsMultipleSelection = NO;
     [self presentViewController:picker animated:YES completion:nil];
@@ -300,7 +293,6 @@ typedef enum _RemindMessageType {
             self.binData = data;
             self.selectedFileName = fileName;
             
-#pragma mark - 解析文件名获取升级参数（与Android一致）
             NSDictionary *params = [BleOTAUtils parseFirmwareFileName:fileName];
             self.upgradeType = [params[@"upgradeType"] integerValue];
             self.partitionNumber = [params[@"partitionNumber"] integerValue];
@@ -310,47 +302,41 @@ typedef enum _RemindMessageType {
             self.isSpecMode = [params[@"isSpecMode"] boolValue];
             self.bootPartition = [params[@"bootPartition"] integerValue];
             
-            NSString *upgradeTypeName = (self.upgradeType == UpgradeTypeApp) ? @"APP固件" : 
-                                      (self.upgradeType == UpgradeTypeSPIFFS) ? @"SPIFS" : @"未知";
+            NSString *typeStr = (self.upgradeType == 0) ? @"APP" : (self.upgradeType == 1) ? @"SPIFFS" : @"Unknown";
             
             self.fileInfoLabel.text = [NSString stringWithFormat:
-                @"✅ 文件: %@\n"
-                @"大小: %.1f KB | 类型: %@\n"
-                @"差分:%@ | Spec:%@ | 分区:%ld",
+                @"File: %@\nSize: %.1f KB | Type: %@\nDelta:%@ Spec:%@ Part:%ld",
                 fileName,
                 data.length / 1024.0,
-                upgradeTypeName,
-                self.isDeltaUpgrade ? @"是" : @"否",
-                self.isSpecMode ? @"是" : @"否",
+                typeStr,
+                self.isDeltaUpgrade ? @"Y" : @"N",
+                self.isSpecMode ? @"Y" : @"N",
                 (long)self.partitionNumber];
             
             self.fileInfoLabel.textColor = [UIColor darkTextColor];
             
-            NSLog(@"[ViewController] 选择文件成功: %@ (%lu bytes)", fileName, (unsigned long)data.length);
-            NSLog(@"[ViewController] 解析参数: type=%ld, partNum=%ld, delta=%@, spec=%@", 
+            NSLog(@"[VC] File selected: %@ (%lu bytes)", fileName, (unsigned long)data.length);
+            NSLog(@"[VC] Params: type=%ld partNum=%ld delta=%@ spec=%@", 
                   (long)self.upgradeType, (long)self.partitionNumber,
                   self.isDeltaUpgrade ? @"YES" : @"NO", self.isSpecMode ? @"YES" : @"NO");
             
-            [self remindMessage:[NSString stringWithFormat:@"已选择: %@", fileName] withType:SuccessType];
+            [self remindMessage:[NSString stringWithFormat:@"Selected: %@", fileName] withType:SuccessType];
         } else {
-            [self remindMessage:@"读取文件失败" withType:ErrorType];
-            NSLog(@"[ViewController] 读取文件失败: %@", error.localizedDescription);
+            [self remindMessage:@"Read failed" withType:ErrorType];
+            NSLog(@"[VC] Read error: %@", error.localizedDescription);
         }
     } else {
-        [self remindMessage:@"文件不存在" withType:ErrorType];
+        [self remindMessage:@"File not found" withType:ErrorType];
     }
 }
 
 - (void)documentPickerWasCancelled:(UIDocumentPickerViewController *)controller {
-    NSLog(@"[ViewController] 用户取消文件选择");
+    NSLog(@"[VC] User cancelled");
     [controller dismissViewControllerAnimated:YES completion:nil];
 }
 
-#pragma mark - OTA升级流程（与Android一致）
+#pragma mark - OTA升级流程
 
-/**
- * 初始化固件数据（切分为扇区）
- */
 - (void)initBinData:(NSData *)bin {
     self.binData = bin;
     
@@ -359,27 +345,22 @@ typedef enum _RemindMessageType {
     self.sectorIndex = 0;
 }
 
-/**
- * 开始OTA升级流程
- * 与Android BleOTAActivity.doConnectGatt → BleOTAClient.connect → ota 一致
- */
 - (void)startOTAUpgrade {
     if (!self.binData || !self.device) {
-        [self remindMessage:@"未选择文件或未连接设备" withType:ErrorType];
+        [self remindMessage:@"No file or device" withType:ErrorType];
         return;
     }
     
-    NSLog(@"[ViewController] 开始OTA升级...");
-    NSLog(@"[ViewController] 参数: type=%ld, partNum=%ld, delta=%@, pType=%ld, pSubtype=%ld, spec=%@, bootPart=%ld",
+    NSLog(@"[VC] Starting OTA...");
+    NSLog(@"[VC] Params: type=%ld partNum=%ld delta=%@ pType=%ld pSubtype=%ld spec=%@ bootPart=%ld",
           (long)self.upgradeType, (long)self.partitionNumber,
           self.isDeltaUpgrade ? @"YES" : @"NO",
           (long)self.partitionType, (long)self.partitionSubtype,
           self.isSpecMode ? @"YES" : @"NO", (long)self.bootPartition);
     
     [self showProgress:YES];
-    [self remindMessage:@"正在发送START命令..." withType:defaultType];
+    [self remindMessage:@"Sending START..." withType:defaultType];
     
-#pragma mark - 发送完整的START命令（18字节payload，与Android一致）
     NSData *startCommand = [BleOTAUtils generateStartCommandPacketWithSize:self.binData.length
                                                                 upgradeType:self.upgradeType
                                                              partitionNumber:self.partitionNumber
@@ -394,10 +375,6 @@ typedef enum _RemindMessageType {
     [self initBinData:self.binData];
 }
 
-/**
- * OTA数据传输（发送固件扇区）
- * 与Android BleOTAClient.ota() → postNextPacket 一致
- */
 - (void)ota {
     if (self.sectorIndex < self.binSectors.count) {
         NSData *sector = self.binSectors[self.sectorIndex];
@@ -408,9 +385,6 @@ typedef enum _RemindMessageType {
     }
 }
 
-/**
- * 原有方法保留兼容：从Documents目录读取（不推荐使用）
- */
 - (void)getDocBinFile {
     NSString *path = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) objectAtIndex:0];
     NSArray *files = [[NSFileManager defaultManager] subpathsOfDirectoryAtPath:path error:nil];
@@ -431,7 +405,6 @@ typedef enum _RemindMessageType {
     
     [self showProgress:YES];
     
-#pragma mark - 使用简化的START命令（仅binSize，用于向后兼容）
     [self.device.currPeripheral writeValue:[BleOTAUtils generateStartCommandPacket:data.length] forCharacteristic:self.device.charCommand type:CBCharacteristicWriteWithResponse];
     
     [self initBinData:data];
@@ -444,24 +417,24 @@ typedef enum _RemindMessageType {
         switch (message.mid) {
             case COMMAND_ID_START:
                 if (message.status == AckAccept) {
-                    NSLog(@"[OTA] START ACK 接受，开始传输数据");
+                    NSLog(@"[OTA] START ACK OK");
                     [self ota];
                 } else {
-                    NSLog(@"[OTA] START ACK 拒绝");
+                    NSLog(@"[OTA] START ACK FAIL");
                     [self showProgress:NO];
-                    [self alterMessage:@"升级启动失败"];
+                    [self alterMessage:@"Start failed"];
                 }
                 break;
             case COMMAND_ID_END:
                 if (message.status == AckAccept) {
-                    NSLog(@"[OTA] END ACK 接受，升级完成！");
+                    NSLog(@"[OTA] END ACK OK");
                     [self.espFBYBleHelper disconnect:_device];
                     [self showProgress:NO];
-                    [self alterMessage:@"✅ 升级成功！"];
+                    [self alterMessage:@"Success!"];
                 } else {
-                    NSLog(@"[OTA] END ACK 拒绝");
+                    NSLog(@"[OTA] END ACK FAIL");
                     [self showProgress:NO];
-                    [self alterMessage:@"升级结束失败"];
+                    [self alterMessage:@"End failed"];
                 }
                 break;
             default:
@@ -470,9 +443,9 @@ typedef enum _RemindMessageType {
     } else if (characteristic == self.device.charRecvFW) {
         OTAMessage *message = [BleOTAUtils parseBinAckPacket:characteristic.value];
         if (message.index != self.sectorIndex) {
-            NSLog(@"[OTA] 扇区ACK索引不匹配: 期望=%lu, 实际=%d", (unsigned long)self.sectorIndex, message.index);
+            NSLog(@"[OTA] Index mismatch: expect=%lu got=%d", (unsigned long)self.sectorIndex, message.index);
             [self showProgress:NO];
-            [self alterMessage:@"扇区索引错误"];
+            [self alterMessage:@"Index error"];
             return;
         }
         
@@ -482,9 +455,9 @@ typedef enum _RemindMessageType {
                 [self ota];
                 break;
             default:
-                NSLog(@"[OTA] 扇区ACK失败: status=%d", message.status);
+                NSLog(@"[OTA] Sector fail: %d", message.status);
                 [self showProgress:NO];
-                [self alterMessage:@"数据传输失败"];
+                [self alterMessage:@"Transfer failed"];
                 break;
         }
     }
@@ -498,9 +471,7 @@ typedef enum _RemindMessageType {
     });
 }
 
-//分包发送蓝牙数据
--(void)sendMsgWithSector:(NSData*)sector
-                 SectorIndex:(NSUInteger)index
+-(void)sendMsgWithSector:(NSData*)sector SectorIndex:(NSUInteger)index
 {
     UInt16 crc = 0;
     int sequence = 0;
@@ -542,7 +513,6 @@ typedef enum _RemindMessageType {
     [self.view endEditing:YES];
 }
 
-//UITextFieldDelegate
 - (void)textFieldDidBeginEditing:(UITextField *)textField {
     self.keyboardview.hidden = NO;
 }
