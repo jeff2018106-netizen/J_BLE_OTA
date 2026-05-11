@@ -25,7 +25,7 @@ typedef enum _RemindMessageType {
 @interface ViewController ()<UITableViewDelegate, UITableViewDataSource, UITextFieldDelegate, ESPFBYBleNotifyDelegate, UIDocumentPickerDelegate>
 
 @property(strong, nonatomic)UIActivityIndicatorView *progressView;
-@property (nonatomic, strong) ESPFBYBleHelper *espFBYBleHelper;
+@property (nonatomic, strong) ESPFBYBLEHelper *espFBYBleHelper;
 @property (nonatomic, strong) NSMutableArray *dataSource;
 
 @property (nonatomic, strong) UITableView *espBleDeviceTableView;
@@ -478,20 +478,27 @@ typedef enum _RemindMessageType {
     int sequence = 0;
     NSUInteger mtu = [self.device.currPeripheral maximumWriteValueLengthForType:CBCharacteristicWriteWithoutResponse];
     NSLog(@"mtu: %lu", (unsigned long)mtu);
-    Byte buf[mtu-5];
+    // 使用动态分配替代 C99 VLA，避免栈溢出风险和部分编译器警告
+    NSUInteger chunkSize = (mtu > 5) ? (mtu - 5) : 1;
+    Byte *buf = (Byte *)malloc(chunkSize);
+    if (!buf) {
+        NSLog(@"[OTA] malloc buf failed, mtu=%lu", (unsigned long)mtu);
+        return;
+    }
     NSInputStream *stream = [[NSInputStream alloc] initWithData:sector];
     [stream open];
     while (stream.hasBytesAvailable) {
-        NSUInteger read = [stream read:buf maxLength:mtu-5];
+        NSUInteger read = [stream read:buf maxLength:chunkSize];
         if (!stream.hasBytesAvailable) {
             crc = [EspCRC16 crc:sector];
             sequence = -1;
         }
-        NSData *binPacket = [BleOTAUtils generateBinPakcet: buf dataLength:read index:index sequence:sequence crc:crc];
+        NSData *binPacket = [BleOTAUtils generateBinPakcet:buf dataLength:read index:index sequence:sequence crc:crc];
         ++sequence;
         [self.device.currPeripheral writeValue:binPacket forCharacteristic:self.device.charRecvFW type:CBCharacteristicWriteWithResponse];
     }
     [stream close];
+    free(buf);
     
 }
 

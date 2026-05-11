@@ -32,7 +32,7 @@ static const int EspMeshLayerUnknow = -1;
 
 @property(nonatomic, strong) NSString *httpType;
 @property(nonatomic, strong) NSString *host;
-@property(nonatomic, assign) NSString *port;
+@property(nonatomic, copy) NSString *port;
 
 @property(nonatomic, strong) NSString *meshID;
 @property(nonatomic, strong) NSString *parentDeviceMac;

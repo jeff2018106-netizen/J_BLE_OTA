@@ -8,8 +8,12 @@
 #ifndef PrefixHeader_pch
 #define PrefixHeader_pch
 
-#ifdef __OBJC__
 #define _USE_MATH_DEFINES
+
+#ifdef __OBJC__
+#import <UIKit/UIKit.h>
+#import <Foundation/Foundation.h>
+#import <CoreBluetooth/CoreBluetooth.h>
 #endif
 
 #define SCREEN_WIDTH [UIScreen mainScreen].bounds.size.width

@@ -20,7 +20,7 @@ typedef void(^BLEIOCallBackBlock)(NSString *msg);
 typedef void(^BLEEncryptionSucBackBlock)(NSString *msg, EspDevice *encryptionSucDevice);
 
 @property(nonatomic, strong) EspDevice *espDevice;
-@property(nonatomic, assign) CBPeripheral *currPeripheral;
+@property(nonatomic, strong) CBPeripheral *currPeripheral;
 @property(nonatomic, strong, nullable) CBCharacteristic* readCharacteristic;
 @property(nonatomic, strong, nullable) CBCharacteristic* writeCharacteristic;
 @property(nonatomic, strong, nullable) CBDescriptor *descriptor;
