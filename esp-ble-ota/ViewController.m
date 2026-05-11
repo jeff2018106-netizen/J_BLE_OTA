@@ -118,7 +118,7 @@ typedef enum _RemindMessageType {
     self.progressView = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:(UIActivityIndicatorViewStyleMedium)];
     self.progressView.frame = CGRectMake(SCREEN_WIDTH / 2 - 50, SCREEN_HEIGHT / 2 - 50, 100, 100);
     self.progressView.color = [UIColor redColor];
-    self.progressView.backgroundColor = UICOLOR_RGBA(236, 236, 236, 1);;
+    self.progressView.backgroundColor = UICOLOR_RGBA(236, 236, 236, 1);
     [self.view addSubview:self.progressView];
 }
 

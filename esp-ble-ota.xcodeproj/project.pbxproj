@@ -31,6 +31,10 @@
 		26B7F7E2272BCC3C00A294E3 /* ESPFBYBLEIO.m in Sources */ = {isa = PBXBuildFile; fileRef = 26B7F7DB272BCC3C00A294E3 /* ESPFBYBLEIO.m */; };
 		26B7F7E9272BCF4400A294E3 /* EspDevice.m in Sources */ = {isa = PBXBuildFile; fileRef = 26B7F7E7272BCF4400A294E3 /* EspDevice.m */; };
 		26B7F7EC272BCFDC00A294E3 /* EspSwitchDevice.m in Sources */ = {isa = PBXBuildFile; fileRef = 26B7F7EB272BCFDC00A294E3 /* EspSwitchDevice.m */; };
+		26B7F804272BCC3D00A294E3 /* CoreBluetooth.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 26B7F800272BCC3D00A294E3 /* CoreBluetooth.framework */; };
+		26B7F805272BCC3D00A294E3 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 26B7F801272BCC3D00A294E3 /* UIKit.framework */; };
+		26B7F806272BCC3D00A294E3 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 26B7F802272BCC3D00A294E3 /* Foundation.framework */; };
+		26B7F807272BCC3D00A294E3 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 26B7F803272BCC3D00A294E3 /* CoreGraphics.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -97,6 +101,10 @@
 		26B7F7E8272BCF4400A294E3 /* EspDevice.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EspDevice.h; sourceTree = "<group>"; };
 		26B7F7EA272BCFDC00A294E3 /* EspSwitchDevice.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EspSwitchDevice.h; sourceTree = "<group>"; };
 		26B7F7EB272BCFDC00A294E3 /* EspSwitchDevice.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = EspSwitchDevice.m; sourceTree = "<group>"; };
+		26B7F800272BCC3D00A294E3 /* CoreBluetooth.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreBluetooth.framework; path = System/Library/Frameworks/CoreBluetooth.framework; sourceTree = SDKROOT; };
+		26B7F801272BCC3D00A294E3 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
+		26B7F802272BCC3D00A294E3 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		26B7F803272BCC3D00A294E3 /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -104,6 +112,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				26B7F804272BCC3D00A294E3 /* CoreBluetooth.framework in Frameworks */,
+				26B7F805272BCC3D00A294E3 /* UIKit.framework in Frameworks */,
+				26B7F806272BCC3D00A294E3 /* Foundation.framework in Frameworks */,
+				26B7F807272BCC3D00A294E3 /* CoreGraphics.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
