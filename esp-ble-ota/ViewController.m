@@ -7,6 +7,7 @@
 //
 
 #import "ViewController.h"
+#import <CoreBluetooth/CoreBluetooth.h>
 #import "ESPFBYBLEHelper.h"
 #import "payFirstNav.h"
 #import "ESPFBYBLEIO.h"
