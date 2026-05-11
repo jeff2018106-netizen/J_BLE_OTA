@@ -9,50 +9,53 @@ workflows:
       xcode: latest
 
     scripts:
-      # ──────────────────────────────────────────────────────────────────
-      # Step 1: 环境诊断 — 打印完整工具链版本，方便快速定位版本相关问题
-      # ──────────────────────────────────────────────────────────────────
-      - name: "[Diag] 环境版本信息"
-        script: |
-          set -euo pipefail
-          echo "====== Xcode ======"
-          xcodebuild -version
-          echo ""
-          echo "====== SDK 列表 ======"
-          xcodebuild -showsdks
-          echo ""
-          echo "====== Clang ======"
-          clang --version
-          echo ""
-          echo "====== macOS ======"
-          sw_vers
-          echo ""
-          echo "====== 工作目录 ======"
-          pwd
-          ls -la
-
-      # ──────────────────────────────────────────────────────────────────
-      # Step 2: 项目结构验证 — 提前发现文件缺失/路径错误
-      # ──────────────────────────────────────────────────────────────────
+      # ════════════════════════════════════════════════════════════════════
+      # Step 1: 项目结构 + 静态信息（零 xcodebuild 调用，避免触发 Xcode 冷启动）
+      #         — 每个 xcodebuild 在 Codemagic 上约耗时 2-5 分钟初始化
+      # ════════════════════════════════════════════════════════════════════
       - name: "[Diag] 项目结构验证"
         script: |
           set -euo pipefail
-          echo "====== 项目文件结构 ======"
-          find . -maxdepth 4 \( -name "*.xcodeproj" -o -name "*.xcworkspace" \
-            -o -name "*.pch" -o -name "Info.plist" \) | sort
+
+          echo "====== macOS 版本 ======"
+          sw_vers
 
           echo ""
-          echo "====== xcodebuild: 列出所有 Scheme ======"
-          xcodebuild -list -project esp-ble-ota.xcodeproj 2>&1 || true
+          echo "====== 关键文件存在性检查 ======"
+          for f in esp-ble-ota.xcodeproj esp-ble-ota/Info.plist; do
+            if [ -e "$f" ]; then
+              echo "  ✅ $f"
+            else
+              echo "  ❌ 缺失: $f"
+            fi
+          done
 
           echo ""
-          echo "====== Source 文件数量 ======"
-          find esp-ble-ota -name "*.m" | wc -l
-          find esp-ble-ota -name "*.h" | wc -l
+          echo "====== Xcode / SDK 版本（从本地缓存读取，不触发初始化）======"
+          # Xcode 安装路径（静态，不会触发任何工具执行）
+          if [ -d "/Applications/Xcode.app" ]; then
+            echo "Xcode.app 路径: /Applications/Xcode.app"
+            # Xcode 版本通过 Info.plist 读取
+            XCODE_VER=$(plutil -p "/Applications/Xcode.app/Contents/Info.plist" 2>/dev/null \
+              | grep -E '"CFBundleShortVersionString"|"Xcode"' | head -4)
+            echo "$XCODE_VER"
+          else
+            echo "  (未找到 /Applications/Xcode.app，跳过)"
+          fi
 
-      # ──────────────────────────────────────────────────────────────────
-      # Step 3: 清理旧构建目录
-      # ──────────────────────────────────────────────────────────────────
+          echo ""
+          echo "====== Scheme 列表（从 project.pbxproj 提取，无 xcodebuild）======"
+          grep -E '^\s*name\s*=' esp-ble-ota.xcodeproj/project.pbxproj \
+            | sed 's/^[[:space:]]*/  /' | sort -u
+
+          echo ""
+          echo "====== 源文件统计 ======"
+          echo "  .m 文件: $(find esp-ble-ota -name '*.m' 2>/dev/null | wc -l)"
+          echo "  .h 文件: $(find esp-ble-ota -name '*.h' 2>/dev/null | wc -l)"
+
+      # ════════════════════════════════════════════════════════════════════
+      # Step 2: 清理旧构建目录
+      # ════════════════════════════════════════════════════════════════════
       - name: "Clean build directory"
         script: |
           set -euo pipefail
@@ -60,9 +63,9 @@ workflows:
           rm -rf build build_output.log
           mkdir -p build
 
-      # ──────────────────────────────────────────────────────────────────
-      # Step 4: 主构建 — 输出最详细 log，失败时自动打印摘要
-      # ──────────────────────────────────────────────────────────────────
+      # ════════════════════════════════════════════════════════════════════
+      # Step 3: 主构建 — 输出最详细 log，失败时自动打印摘要
+      # ════════════════════════════════════════════════════════════════════
       - name: "Build iOS app (unsigned, full diagnostic log)"
         script: |
           set -uo pipefail   # 注意：不加 -e，由脚本自己判断 BUILD_RESULT
@@ -114,9 +117,44 @@ workflows:
             exit 1
           fi
 
-      # ──────────────────────────────────────────────────────────────────
-      # Step 5: 打包 IPA（无签名）
-      # ──────────────────────────────────────────────────────────────────
+          # ── 构建成功：提取耗时摘要（不额外调用 xcodebuild）─────────────
+          echo ""
+          echo "====== 提取 Build Timing Summary ======"
+          # -showBuildTimingSummary 的输出在 xcodebuild 结束时打印，
+          # 在 tee 管道中整段落在日志末尾附近。
+          # 在 log 文件中查找该段落并高亮打印。
+          if grep -q "Build Timing Summary" build_output.log; then
+            echo ""
+            # 提取 "Build Timing Summary" 段落到下一个空行（或文件末尾）
+            sed -n '/Build Timing Summary/,$p' build_output.log \
+              | awk '{
+                  if (/^$/) exit;
+                  if (/:/) {
+                    sub(/^[[:space:]]*/, "");
+                    gsub(/^/, "  ");
+                    print;
+                  } else {
+                    print;
+                  }
+                }'
+          else
+            echo "  (未在 log 中找到 Timing Summary，跳过)"
+          fi
+
+          # ── 构建成功：提取警告汇总 ─────────────────────────────────────
+          WARN_COUNT=$(grep -c "warning:" build_output.log 2>/dev/null || echo "0")
+          echo ""
+          echo "====== 警告统计 (共 $WARN_COUNT 条) ======"
+          if [ "$WARN_COUNT" -gt 0 ]; then
+            grep -n "warning:" build_output.log | head -20 || true
+            if [ "$WARN_COUNT" -gt 20 ]; then
+              echo "  ... 还有 $((WARN_COUNT - 20)) 条警告，见完整 log"
+            fi
+          fi
+
+      # ════════════════════════════════════════════════════════════════════
+      # Step 4: 打包 IPA（无签名）
+      # ════════════════════════════════════════════════════════════════════
       - name: "Package unsigned IPA"
         script: |
           set -euo pipefail
